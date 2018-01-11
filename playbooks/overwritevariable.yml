@@ -1,0 +1,11 @@
+#!/usr/bin/env ansible-playbook
+---
+# ansible-playbook overwritevariable.yml -e "message=ade"
+- name: overwrite variables
+  hosts: localhost
+  vars:
+    message: "please assign the message"
+  tasks:
+    - name: show message
+      debug:
+        msg: "the message is {{ message }}"

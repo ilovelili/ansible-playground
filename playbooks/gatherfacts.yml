@@ -1,0 +1,10 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- name: gathering facts
+  hosts: localhost
+  become: false
+  gather_facts: true
+  tasks:
+    - debug:
+        msg: "ansible distribution is {{ ansible_distribution }}"

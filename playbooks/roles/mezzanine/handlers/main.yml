@@ -1,0 +1,12 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: restart supervisor
+  supervisorctl: 
+    name: gunicorn_mezzanine 
+    state: restarted
+  become: True
+- name: restart nginx
+  service: 
+    name: nginx 
+    state: restarted
+  become: True

@@ -1,0 +1,15 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- name: register whoami
+  hosts: localhost
+  become: False
+  tasks:
+    - name: register whoami
+      command: whoami
+      register: login
+    - set_fact:
+        login_fact: "{{ login.stdout }}"
+
+    - debug: 
+        msg: "login user is {{ login_fact }}"

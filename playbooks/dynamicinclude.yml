@@ -1,0 +1,9 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: play with dynamic include
+  hosts: def
+  tasks:
+    - name: echo ade
+      shell: echo ade
+    - include: "include_{{ ansible_os_family }}.yml"
+      static: no

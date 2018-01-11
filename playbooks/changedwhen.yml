@@ -1,0 +1,10 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Idempotent changed when
+  hosts: localhost
+  tasks:
+    - name: init database
+      django_manage:
+        command: createdb --noinput --nodata
+      register: result
+      changed_when: '"Creating tables" in result.out|default("")'

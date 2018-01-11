@@ -1,0 +1,9 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- name: check hostvars
+  hosts: localhost
+  become: false
+  tasks:
+    - debug: 
+        msg: "hostvars are {{ hostvars[inventory_hostname] }}"

@@ -1,0 +1,417 @@
+-------------------------------------------------------------------------------------------------------
+If your playbook file is marked as executable and starts with a line that looks like this: 
+#!/usr/bin/env ansible-playbook
+
+then you can execute it by invoking it directly, like this:
+$ ./web-notls.yml
+
+
+-------------------------------------------------------------------------------------------------------
+Breaking the Inventory into Multiple Files:
+If you want to have both a regular inventory file and a dynamic inventory script, just put them all in the
+same directory and configure Ansible to use that directory as the inventory.
+
+like:
+
+inventory (directory)
+    - hosts
+    - dynamic.py
+
+inventory=inventory
+
+-------------------------------------------------------------------------------------------------------
+It's a good practice to use set_fact module after register a variable
+
+-------------------------------------------------------------------------------------------------------
+Ansible setup module is used to output all the facts
+use -a to filter by fact name:
+ansible web -m setup -a 'filter=ansible_eth*'
+
+-------------------------------------------------------------------------------------------------------
+hostvars:
+hostvars variable is a dictionary that contains all of the variables defined on all of the hosts, 
+keyed by the hostname as known to Ansible.
+
+For example, if our database server is db.example.com, then we could put the following in a configuration template:
+{{ hostvars['db.example.com'].ansible_eth1.ipv4.address }}
+
+
+-------------------------------------------------------------------------------------------------------
+playbook Handlers:
+
+Handlers usually run after all of the tasks are run at the end of the play. They run only
+once, even if they are notified multiple times.
+
+-------------------------------------------------------------------------------------------------------
+overwrite variables:
+Example: greetvars.yml
+
+greeting: hiya
+
+Then we can pass this file to the command line like this:
+$ ansible-playbook greet.yml -e @greetvars.yml
+
+or
+
+$ ansible-playbook greet.yml -e "greeting=hiya"
+
+-------------------------------------------------------------------------------------------------------
+list tasks of playbook
+ansible-playbook --list-tasks ./playbooks/whoami.yml 
+
+-------------------------------------------------------------------------------------------------------
+Ansible’s iteration functionality: the with_items clause.
+
+- name: install packages
+  apt:
+    pkg: {{ item }}
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items:
+    - git
+    - nginx
+
+- name: python packages
+  pip: name={{ item.name }} version={{ item.version }} virtualenv={{ venv_path }}
+  with_items:
+    - {name: mezzanine, version: 4.2.2 }
+    - {name: gunicorn, version: 19.6.0 }
+    - {name: setproctitle, version: 1.1.10 }
+
+-------------------------------------------------------------------------------------------------------
+update_cache: yes => run apt update to ensure the local apt cache is up-to-date
+
+Because updating the cache takes additional time, and because we might be running a
+playbook multiple times in quick succession in order to debug it, we can avoid paying 
+the cache update penalty by using the cache_valid_time argument to the module
+
+cache_valid_time: 3600 => updates the cache only if it’s older than 3,600 seconds (1 hour)
+
+-------------------------------------------------------------------------------------------------------
+enable ssh agent forwarding
+
+[ssh_connection]
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ForwardAgent=yes
+
+-------------------------------------------------------------------------------------------------------
+xip.io
+AAA.BBB.CCC.DDD is an IP address, the DNS entry AAA.BBB.CCC.DDD.xip.io will
+resolve to AAA.BBB.CCC.DDD. For example, 192.168.33.10.xip.io resolves to
+192.168.33.10.
+
+-------------------------------------------------------------------------------------------------------
+when:
+
+- name: ensure config path exists
+  file: path={{ conf_path }} state=directory
+  sudo: True
+  when: tls_enabled
+- name: create tls certificates
+  command: >
+    openssl req -new -x509 -nodes -out {{ proj_name }}.crt
+    -keyout {{ proj_name }}.key -subj '/CN={{ domains[0] }}' -days 3650
+    chdir={{ conf_path }}
+    creates={{ conf_path }}/{{ proj_name }}.crt
+  sudo: True
+  when: tls_enabled
+  notify: restart nginx
+
+Note that both tasks contain this clause:
+when: tls_enabled
+If tls_enabled evaluates to false , Ansible will skip the task
+
+-------------------------------------------------------------------------------------------------------
+ansible cron module:
+
+name: install poll twitter cron job
+cron: name="poll twitter" minute="*/5" user={{ user }} job="{{ manage }} \ poll_twitter"
+
+-------------------------------------------------------------------------------------------------------
+ansible git module:
+
+name: check out the repository on the host
+git: repo={{ repo_url }} dest={{ proj_path }} accept_hostkey=yes
+
+-------------------------------------------------------------------------------------------------------
+ansible locale_gen module:
+
+locale_gen (E) - Creates or removes locales.
+
+name: create project locale
+locale_gen: name={{ locale }}
+become: True
+
+-------------------------------------------------------------------------------------------------------
+ansible postgreSQL user module
+
+- name: create a DB user
+  postgresql_user:
+    name: "{{ database_user }}"
+    password: "{{ db_pass }}"
+  become: True
+  become_user: postgres
+
+  - name: create the database
+    postgresql_db:
+        name: "{{ database_name }}"
+        owner: "{{ database_user }}"
+        encoding: UTF8
+        lc_ctype: "{{ locale }}"
+        lc_collate: "{{ locale }}"
+        template: template0
+    become: True
+    become_user: postgres
+
+
+-------------------------------------------------------------------------------------------------------
+ansible script module:
+
+- name: set the site id
+      script: scripts/setsite.py
+      environment:
+        PATH: "{{ venv_path }}/bin"
+        PROJECT_DIR: "{{ proj_path }}"
+        PROJECT_APP: "{{ proj_app }}"
+        WEBSITE_DOMAIN: "{{ live_hostname }}"
+
+-------------------------------------------------------------------------------------------------------
+set the roles path:
+
+[defaults]
+roles_path = ~/ansible_roles
+
+basic role structure:
+
+roles/database/tasks/main.yml => Tasks
+
+roles/database/files/ => Holds files to be uploaded to hosts
+
+roles/database/templates/ => Holds Jinja2 template files
+
+roles/database/handlers/main.yml => Handlers
+
+roles/database/vars/main.yml => Variables that shouldn’t be overridden
+
+roles/database/defaults/main.yml => Default variables that can be overridden
+
+roles/database/meta/main.yml => Dependency information about a role
+
+-------------------------------------------------------------------------------------------------------
+pre_tasks & post_tasks:
+
+run tasks before invoking the roles: pre_tasks
+run tasks after invoking the roles: post_tasks
+
+for example: run apt update before role and run slack after role
+
+- name: deploy web
+  hosts: web
+  var_files:
+    secrets.yml
+  pre_tasks:
+    - name: update apt cache
+      apt:
+        update_cache: yes
+  roles:
+    role: database
+    database_name: "{{ databasename }}"
+    database_password: "{{ databasepassword }}"
+  post_tasks:
+    - name: notify slack
+      local_action: >
+        slack
+        domain=acme.slack.com
+        token={{ slack_token }}
+        msg="web server {{ inventory_hostname }} configured"
+
+-------------------------------------------------------------------------------------------------------
+variables:
+variables can be defined in
+- group_vars (group_vars/all => all the global variables)
+- host_vars
+- roles/defaults/main.yml => overridable
+- roles/vars/main.yml => should not override
+- var_files
+
+
+-------------------------------------------------------------------------------------------------------
+include statement:
+use include to add task files
+
+example:
+
+uses include statements to invoke two other task files that are
+in the same directory
+
+example: roles/mezzanine/tasks/main.yml
+
+- name: install apt packages
+  apt:
+    pkg: "{{ item }}"
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items:
+    - git
+  become: True
+- include: django.yml
+- include: nginx.yml
+
+
+-------------------------------------------------------------------------------------------------------
+When invoking copy in a task defined in a role, Ansible will first check the rolename/files/ directory 
+for the location of the file to copy
+
+while invoking template defined in a role, ansible will check rolename/templates/ directly instead
+
+-------------------------------------------------------------------------------------------------------
+ansible galaxy:
+
+define roles_path in ansible.cfg
+[defaults]
+roles_path = ./ansible_roles
+
+ansible-galaxy init -p playbooks/roles web
+
+install role:
+ansible-galaxy install -p ./roles bennojoy.ntp
+
+-------------------------------------------------------------------------------------------------------
+role Dependencies defined in rolename/meta/main.yml like:
+
+Example 7-14. roles/web/meta/main.yml
+
+dependencies:
+- { role: ntp, ntp_server=ntp.ubuntu.com }
+
+-------------------------------------------------------------------------------------------------------
+falied_when:
+failed_when: False: the execution won't stop even if the module returns failure
+
+example:
+
+- name: some task
+  command: >
+    somecommand
+  register: output
+  failed_when: False
+
+- set_fact:
+    outputfact: "{{output.stderr}}"
+
+- debug:
+    msg: "output is {{ outputfact }}"
+
+- name: fail handling
+  fail:
+    msg: "you failed"
+
+
+-------------------------------------------------------------------------------------------------------
+Jinja filters
+
+default:
+
+hosts: "{{ database_host | default('localhost') }}",
+# if database_host is not defined, use localhost as host
+
+task run filters:
+
+result|success 
+result|failed 
+result|changed
+result|skipped
+
+filepath filters:
+basename (for example, file path is /usr/bin/nginx/sites/index.html, then file|basename is index.html)
+dirname (for example, file path is /usr/bin/nginx/sites/index.html, then file|dirname is /usr/bin/nginx/sites/)
+
+
+ansible custom filter
+Ansible will look for custom filters in the filter_plugins directory, relative to the directory containing your playbooks
+
+for example: http://stackoverflow.com/a/15515929/742
+-------------------------------------------------------------------------------------------------------
+
+lookups:
+
+file: 
+{{ lookup('file', './myfile.txt') }}
+
+pipe:
+{{ lookup('pipe', 'echo adesama') }}
+
+env:
+{{ lookup('env', 'SHELL') }}
+
+password:
+{{ lookup('password', './generatedpasswordfile.txt') }}
+
+csvfile:
+{{ lookup('csvfile', 'yoko(key in csv file), file=user.csv(csv file name), delimiter=,(delimiter), col=1 (lookup column in csv)')}}
+
+redis_kv: read from redis. redis must be pre-installed
+
+sudo apt install redis-server
+sudo apt install redis-tools
+sudo pip install redis
+
+{{ lookup('redis_kv', 'redis://localhost:6379,weather') }}
+
+-------------------------------------------------------------------------------------------------------
+loops:
+
+with_item
+ 
+with_fileglob
+
+with_dict
+
+-------------------------------------------------------------------------------------------------------
+tags:
+
+tags can be used to run a specific part of the tasks without running the whole playbook.
+
+example:
+
+- name: play with tags
+  package:
+    name: nginx
+    state: present
+  tags: nginx
+  become: true
+
+- name: another tag
+  shell: echo 'ade'
+  tags: shell
+  become: true
+
+ansible-playbook example.yml --tags "nginx"
+
+-------------------------------------------------------------------------------------------------------
+
+include:
+
+static include:
+
+example:
+
+---
+- name: include
+  hosts: localhost
+  tasks:
+    - include: sub_task.yml
+      tags: mytag
+      become: True
+
+
+dynamic include:
+
+example:
+
+---
+- name: dynamic include
+  hosts: localhost
+  tasks:
+    - include: ' {{ ansible_os_family }}.yml '
+      become: True
+      tags: mytag

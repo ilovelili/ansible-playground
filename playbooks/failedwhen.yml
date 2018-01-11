@@ -1,0 +1,30 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: init database
+  hosts: localhost
+  vars:
+    user: "{{ ansible_user }}"
+    proj_app: mezzanine_example
+    proj_name: "{{ proj_app }}"
+    venv_home: "{{ ansible_env.HOME }}/.virtualenvs"
+    venv_path: "{{ venv_home }}/{{ proj_name }}"
+    proj_path: "{{ ansible_env.HOME }}/mezzanine/{{ proj_name }}"
+  tasks:
+    - name: create database
+      django_manage:
+        command: createdb --noinput --nodata
+        app_path: "{{ proj_path }}"
+        virtualenv: "{{ venv_path }}"
+      become: True
+      register: output
+      failed_when: False
+
+    - debug:
+        var: "{{ output }}"
+    - set_fact:
+        outputfact: "{{ output.module_stderr }}"
+      
+    - name: fail handling
+      fail:      
+        msg: "you failed fool. output is {{ outputfact }}"
+

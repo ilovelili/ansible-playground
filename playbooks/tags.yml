@@ -1,0 +1,23 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: play with tags
+  hosts: def
+  tasks:
+    - name: install nginx
+      package:
+        name: nginx
+        state: present
+      tags: nginx
+      become: true
+    
+    - name: ensure nginx is running
+      service:
+        name: nginx
+        state: started
+      tags: nginx
+      become: true
+
+    - name: another tag
+      shell: echo 'ade'
+      tags: shell
+      

@@ -1,0 +1,4 @@
+#!/usr/bin/env ansible-playbook
+---
+dependencies:
+  - { role: ntp, ntp_server=ntp.ubuntu.com }

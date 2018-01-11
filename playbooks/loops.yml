@@ -1,0 +1,33 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: play with loops
+  hosts: '{{ hosts|default("localhost") }}'
+  vars:
+    file: user.csv
+  tasks:
+    - name: with_lines
+      debug:
+        msg: "line is {{ item }}"
+      with_lines:
+        - cat {{ file }}
+
+    - name: with_fileglob
+      debug:
+        msg: "nginx key is {{ item }}"
+      with_fileglob:
+        - "*.key" # under /playbooks/files directory
+
+    - name: with_dict
+      debug:
+        msg: "ansible_wlan0: key is {{ item.key }}, value is {{ item.value }}"
+      with_dict: "{{ ansible_wlan0.ipv4 }}"
+
+    - name: loop control
+      debug:
+        msg: "user name is: {{ user.name }}"
+      with_items:
+        - { name: ade }
+        - { name: bde }
+        - { name: cde }
+      loop_control:
+        loop_var: user # use user instead of item for loop, new in ansible 2.1

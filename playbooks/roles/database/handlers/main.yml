@@ -1,0 +1,7 @@
+#!/usr/env/bin ansible-playbook
+---
+- name: restart postgres
+  service:
+    name: postgresql
+    state: restarted
+  become: True

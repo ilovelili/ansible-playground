@@ -1,0 +1,23 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: file path filter
+  vars:
+    path: /usr/bin/nginx/sites/index.html
+  hosts: "{{ hosts|default('localhost') }}"
+  tasks:
+    - name: check basename filter
+      debug:
+        msg: "basename is {{ path|basename }}"
+    - name: check dirname filter
+      debug:
+        msg: "dirname is {{ path|dirname }}"
+    - name: check expanduser filter
+      debug:
+        msg: "expanduser is {{ path|expanduser }}"
+    - name: check realpath filter
+      debug:
+        msg: "realpath is {{ path|realpath }}"
+
+
+
+    

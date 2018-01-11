@@ -1,0 +1,99 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: play with conditions
+  hosts: localhost
+  become: False
+  vars:
+    vim_redhat: "vim-enhanced"
+    vim_debian: "vim"
+    epic: true
+  vars_files:
+    - "vars/{{ ansible_os_family }}.yml"
+  tasks:
+    - name: basic usage install vim (Debian)
+      apt:
+        pkg: "{{ vim_debian }}"
+        state: installed
+      when: ansible_os_family == "Debian"
+
+    - name: basic usage install vim (RedHat)
+      yum:
+        pkg: "{{ vim_redhat }}"
+        state: installed
+      when: ansible_os_family == "RedHat" 
+    
+    - name: basic usage install vim (Unexpected OS)
+      debug:
+        msg: "{{ ansible_os_family }} is not supported"
+      when: ansible_os_family != "RedHat" and ansible_os_family != "Debian"
+
+    - name: use jinja2 in when
+      shell: "/bin/echo 'false'"
+      register: result
+
+    - name: invoke when result is false
+      debug: 
+        msg: "false invoked"
+      when: result|failed
+
+    - name: invoke when result is true
+      debug: 
+        msg: "true invoked"
+      when: result|success
+
+    - name: invoke when skipped
+      debug: 
+        msg: "skipped"
+      when: result|skipped
+
+    - name: invoke when changed
+      debug: 
+        msg: "changed"
+      when: result|changed
+
+    - name: using vars (is epic)
+      debug: 
+        msg: "this is epic"
+      when: epic
+
+    - name: using vars (is not epic)
+      debug:
+        msg: "this is not epic"
+      when: not epic
+
+    - name: using is defined
+      debug:
+        msg: "epic is {{ epic }}"
+      when: epic is defined
+
+    - name: using is not defined
+      debug:
+        msg: "epic is not defined"
+      when: epic is not defined
+
+    - name: loop with when
+      debug:
+        var: item
+      with_items: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      when: item % 2 == 0
+
+    - name: using var_files with jinja2 (make sure mongod is running)
+      service:
+        name: "{{ mongodb }}"
+        state: running
+      when: mongodb is defined
+      register: result   
+      failed_when: False
+      
+    - debug:
+        var: result
+    - set_fact:
+        err: "{{ result.msg }}"
+
+    - name: fail handling
+      fail:
+        msg: "{{ err }}" 
+      
+
+          
+

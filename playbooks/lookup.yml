@@ -1,0 +1,30 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: play with lookup
+  hosts: "{{ hosts|default('localhost')}}"
+  tasks: 
+    - name: read from file using file lookup
+      debug:
+        msg: "file lookup {{ lookup('file', './files/nginx.key') }}"
+    - name: executing external cmd using pipe
+      debug:
+        msg: "date is {{ lookup('pipe', 'date') }}"
+    - name: output env variable using env lookup
+      debug:
+        msg: "SHELL is {{ lookup('env', 'SHELL') }}"
+    - name: generate password using password lookup
+      debug:
+        msg: "password is {{ lookup('password', 'password.txt') }}"
+    - name: parsing template using template lookup
+      debug:
+        msg: "parsing template: {{ lookup('template', './templates/index.html.j2') }}"
+    - name: parsing csv file
+      debug:
+        msg: "{{ lookup('csvfile', 'yoko file=user.csv delimiter=, col=1') }}"
+      register: yoko
+    - name: echo yoko
+      debug:
+        var: yoko
+    - name: get from redis using redis_kv
+      debug:
+        msg: "redis data is {{ lookup('redis_kv', 'redis://localhost:6379,weather') }}"

@@ -1,0 +1,7 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: play with include
+  hosts: def
+  tasks:
+    - include: include_sub.yml
+      when: ansible_os_family == 'Debian'
