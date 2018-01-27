@@ -1,0 +1,20 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Docker login
+  hosts: localhost
+  vars:
+    username: ilovelili
+    email: route666@live.cn
+    password: A7059970599
+  tasks:
+    - name: login
+      docker_login:
+        username: "{{ username }}"
+        password: "{{ password }}"
+        email: "{{ email }}"
+      become: True
+    # - name: push image up
+      #   docker_image:
+      #   name: ansiblebook/nginx-ghost
+      #   push: yes
+

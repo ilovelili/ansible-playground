@@ -415,3 +415,11 @@ example:
     - include: ' {{ ansible_os_family }}.yml '
       become: True
       tags: mytag
+
+
+-------------------------------------------------------------------------------------------------------
+
+ansible with docker
+
+ansible localhost -m docker_container -a "name=test-ghost image=ghost ports=8000:2368"
+ansible localhost -m docker_container -a "name=test-ghost state=absent"
